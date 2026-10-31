@@ -1,0 +1,64 @@
+name: build-apk
+
+# One AccessibilityService, one JSON tree, two transports. Tests run before the build: a broken
+# rule about windows or caps is worth failing the run for.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: unit tests
+        run: gradle test --no-daemon --console=plain
+
+      - name: assemble
+        env:
+          # The APK installs over the previous one instead of being refused as older.
+          BRIDGE_VERSION_CODE: ${{ github.run_number }}
+        run: gradle assembleRelease --no-daemon --console=plain
+
+      - name: inspect
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          test -f "$apk"
+          aapt2=$(ls -1d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          badge=$("$aapt2" dump badging "$apk" | sed -n '/^package:/p')
+          echo "$badge"
+          case "$badge" in
+            *"name='io.github.zh_tx3.a11ybridge'"*) ;;
+            *) echo "::error::unexpected package: $badge"; exit 1 ;;
+          esac
+          names=$("$aapt2" dump xmltree "$apk" --file AndroidManifest.xml | grep -oE 'name\(0x01010003\)="[^"]*"' | sort -u)
+          case "$names" in
+            *'"io.github.zh_tx3.a11ybridge.BridgeService"'*) ;;
+            *) echo "::error::the service did not resolve into the package"; exit 1 ;;
+          esac
+          echo "size=$(stat -c%s "$apk") bytes"
+          echo "sha256=$(sha256sum "$apk" | cut -d' ' -f1)"
+          echo "### $(basename "$apk") — $(du -h "$apk" | cut -f1), sha256 \`$(sha256sum "$apk" | cut -d' ' -f1)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a11y-bridge-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- A loopback ServerSocket needs it, even though nothing leaves the device. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@android:drawable/ic_menu_view"
+        android:label="@string/app_name"
+        android:supportsRtl="true">
+
+        <!-- No launcher alias: an accessibility entry is reachable from 设置 → 无障碍 whether or
+             not the app has an icon. This activity exists only for the "open the settings page"
+             shortcut, and is not exported. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".BridgeService"
+            android:exported="true"
+            android:label="@string/service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/bridge_service" />
+        </service>
+    </application>
+</manifest>

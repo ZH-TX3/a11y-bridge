@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">A11y Bridge</string>
+    <string name="service_label">A11y Bridge 读屏</string>
+    <string name="service_description">把当前屏幕的无障碍节点树以 JSON 交给本机 loopback（只接受 adb shell 下发的 token）。不是给视障用户用的读屏器。</string>
+</resources>
