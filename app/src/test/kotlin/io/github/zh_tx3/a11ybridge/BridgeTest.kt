@@ -89,13 +89,9 @@ class BridgeTest {
         val port = bridge.start(token, 0).first()
         assertEquals("pong", request(port, "$token ping"))
 
-        val deadline = System.currentTimeMillis() + 3_000
-        var answer: String? = "still open"
-        while (answer != null && System.currentTimeMillis() < deadline) {
-            Thread.sleep(100)
-            answer = request(port, "$token ping")
-        }
-        assertNull("the port is still answering after the idle window", answer)
+        // Silence, then one look: polling with requests would itself keep the listener alive.
+        Thread.sleep(1_000)
+        assertNull("the port is still answering after the idle window", request(port, "$token ping"))
     }
 
     @Test
