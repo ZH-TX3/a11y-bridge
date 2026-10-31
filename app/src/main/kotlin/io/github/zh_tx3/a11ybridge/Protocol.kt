@@ -15,6 +15,9 @@ package io.github.zh_tx3.a11ybridge
 internal object Protocol {
     const val DEFAULT_BUDGET = 400
 
+    /** Runs of whitespace: a hand-typed command should not have to count spaces. */
+    private val WHITESPACE = Regex("\\s+")
+
     class Request(val cmd: String, val budget: Int, val reuse: Boolean, val seq: Int)
 
     /** null means "wrong token or unusable line": the caller drops the connection silently. */
@@ -23,7 +26,7 @@ internal object Protocol {
         val space = trimmed.indexOf(' ')
         if (space <= 0) return null
         if (trimmed.substring(0, space) != token) return null
-        val parts = trimmed.substring(space + 1).trim().split(' ')
+        val parts = trimmed.substring(space + 1).trim().split(WHITESPACE)
         val cmd = parts.firstOrNull()?.takeIf { it.isNotEmpty() } ?: return null
         return Request(
             cmd = cmd,

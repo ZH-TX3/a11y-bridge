@@ -48,7 +48,15 @@ class TreeTest {
 
     @Test
     fun windowsAreReadTopFirst() {
-        val snapshot = read(listOf(Win(1, layer = 1), Win(2, layer = 3), Win(3, layer = 2)))
+        // Short windows: a full-screen one hides what is under it (see the next test).
+        val short = Box(0, 0, 1000, 200)
+        val snapshot = read(
+            listOf(
+                Win(1, layer = 1, bounds = short),
+                Win(2, layer = 3, bounds = short),
+                Win(3, layer = 2, bounds = short),
+            ),
+        )
         assertEquals(listOf(2, 3, 1), snapshot.windows.map { it.id })
     }
 

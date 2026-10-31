@@ -61,10 +61,19 @@ class ProtocolTest {
 
     @Test
     fun extraWhitespaceDoesNotShiftTheArguments() {
-        val request = Protocol.parse("  $token   dump   250   7  ", token)
+        val request = Protocol.parse("  $token   dump   250   -   7  ", token)
         assertEquals("dump", request?.cmd)
         assertEquals(250, request?.budget)
+        assertFalse(request?.reuse == true)
         assertEquals(7, request?.seq)
+    }
+
+    @Test
+    fun anArgumentInTheReuseSlotIsNotASeq() {
+        // Positional, as documented: the third slot is the reuse flag, whatever is in it.
+        val request = Protocol.parse("$token dump 250 7", token)
+        assertFalse(request?.reuse == true)
+        assertEquals(0, request?.seq)
     }
 
     @Test
