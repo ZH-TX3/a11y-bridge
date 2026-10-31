@@ -78,6 +78,10 @@ The length in the frame is what makes the reply safe to read with `nc` (which ot
 4 KB). One connection serves as many reads as it likes; a poll loop should keep it open. A wrong
 token gets no reply and the connection is dropped.
 
+The listener closes itself after ten idle minutes — a port nobody is using should not stay open.
+The next `--socket` call notices, re-broadcasts `listen` with a fresh token and reads: that first
+read costs ~0.4 s instead of ~0.05 s, and the ones after it are fast again.
+
 **Broadcast** — `io.github.zh_tx3.a11ybridge.PROBE`, registered with
 `android.permission.DUMP`, so only adb shell or root can send it:
 
@@ -129,6 +133,8 @@ with a full `desc`; both must be read.
 ## What is deliberately not here
 
 - **No wildcard bind.** A screen reader answering on `0.0.0.0` is a screen reader on the LAN.
+- **No listener open by default, and none left open.** It exists only after `listen`, and shuts
+  itself down when nothing has asked for a read in ten minutes.
 - **No pre-read cache by default.** `reuse` is opt-in: an unchanged event count is not proof that
   the pixels are unchanged.
 - **No `isAccessibilityTool=true`.** That flag is a claim about blind users, and this is not that.

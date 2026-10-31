@@ -168,7 +168,7 @@ class BridgeService : AccessibilityService() {
         val port = intent.getIntExtra("port", PORT)
         val bound = bridge?.start(token, port).orEmpty()
         if (bound.isEmpty()) return "ERR nothing bound on port $port (127.0.0.1, ::1)"
-        return "listening on 127.0.0.1:${bound.first()} (and ::1)"
+        return "listening on 127.0.0.1:${bound.first()} (and ::1), closes itself after 10 idle minutes"
     }
 
     /** Where a broadcast dump goes: the app's own files plus the external dir adb shell can read. */

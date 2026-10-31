@@ -22,10 +22,17 @@ internal class Bridge(
     /** Runs on the caller's executor, so captures stay serialized. */
     private val handler: (Protocol.Request) -> ByteArray,
     private val log: (String) -> Unit = {},
+    /** No request for this long and the listener closes itself: a port nobody uses should not stay open. */
+    private val idleCloseMs: Long = 10 * 60_000L,
+    /** How often the watchdog looks. */
+    private val idleCheckMs: Long = 60_000L,
 ) {
     @Volatile
     private var token: String? = null
+    @Volatile
+    private var lastUsedAt = System.currentTimeMillis()
     private var servers: List<ServerSocket> = emptyList()
+    private var watchdog: Thread? = null
 
     /** Returns the ports actually bound, one per address that took. Port 0 picks an ephemeral one. */
     fun start(token: String, port: Int): List<Int> {
@@ -45,19 +52,44 @@ internal class Bridge(
             }
         }
         servers = opened
+        lastUsedAt = System.currentTimeMillis()
         for (socket in opened) {
             Thread({ acceptLoop(socket) }, "bridge-accept").apply {
                 isDaemon = true
                 start()
             }
         }
+        startWatchdog()
         return ports
     }
 
     fun stop() {
         token = null
+        watchdog?.interrupt()
+        watchdog = null
         servers.forEach { runCatching { it.close() } }
         servers = emptyList()
+    }
+
+    /** Closes the listener once nothing has asked for a read in [idleCloseMs]. */
+    private fun startWatchdog() {
+        watchdog = Thread({
+            try {
+                while (true) {
+                    Thread.sleep(idleCheckMs)
+                    val idle = System.currentTimeMillis() - lastUsedAt
+                    if (idle < idleCloseMs) continue
+                    log("idle for ${idle / 1000}s: closing the listener")
+                    stop()
+                    return@Thread
+                }
+            } catch (_: InterruptedException) {
+                // stopped from the outside
+            }
+        }, "bridge-idle").apply {
+            isDaemon = true
+            start()
+        }
     }
 
     private fun acceptLoop(server: ServerSocket) {
@@ -83,6 +115,7 @@ internal class Bridge(
     }
 
     private fun serve(client: Socket) {
+        lastUsedAt = System.currentTimeMillis()
         client.tcpNoDelay = true
         client.soTimeout = IDLE_TIMEOUT_MS
         val input = BufferedReader(InputStreamReader(client.getInputStream(), Charsets.UTF_8))
@@ -91,6 +124,7 @@ internal class Bridge(
             val line = input.readLine() ?: return
             val expected = token ?: return
             val request = Protocol.parse(line, expected) ?: return
+            lastUsedAt = System.currentTimeMillis()
             val body = try {
                 handler(request)
             } catch (e: Throwable) {

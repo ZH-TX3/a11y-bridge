@@ -83,6 +83,45 @@ class BridgeTest {
         assertNull(request(port, "$token ping"))
     }
 
+    @Test
+    fun anIdleListenerClosesItself() {
+        val bridge = Bridge({ "pong".toByteArray() }, idleCloseMs = 300, idleCheckMs = 50)
+        val port = bridge.start(token, 0).first()
+        assertEquals("pong", request(port, "$token ping"))
+
+        val deadline = System.currentTimeMillis() + 3_000
+        var answer: String? = "still open"
+        while (answer != null && System.currentTimeMillis() < deadline) {
+            Thread.sleep(100)
+            answer = request(port, "$token ping")
+        }
+        assertNull("the port is still answering after the idle window", answer)
+    }
+
+    @Test
+    fun aListenerThatIsUsedStaysOpen() {
+        val bridge = Bridge({ "pong".toByteArray() }, idleCloseMs = 400, idleCheckMs = 50)
+        val port = bridge.start(token, 0).first()
+        try {
+            // Well past the idle window in total, but never idle for it.
+            repeat(8) {
+                Thread.sleep(80)
+                assertEquals("read $it", "pong", request(port, "$token ping"))
+            }
+        } finally {
+            bridge.stop()
+        }
+    }
+
+    @Test
+    fun stoppingIsSafeTwice() {
+        val bridge = Bridge({ "pong".toByteArray() })
+        bridge.start(token, 0)
+        bridge.stop()
+        bridge.stop()
+        assertTrue(true) // no exception, no leaked thread keeping the JVM up
+    }
+
     private fun withBridge(block: (port: Int, seen: MutableList<Protocol.Request>) -> Unit) {
         val seen = mutableListOf<Protocol.Request>()
         var counter = 0
