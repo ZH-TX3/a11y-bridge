@@ -24,17 +24,15 @@ jobs:
           java-version: '17'
 
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
 
       - name: unit tests
-        run: gradle test --no-daemon --console=plain
+        run: ./gradlew test --no-daemon --console=plain
 
       - name: assemble
         env:
           # The APK installs over the previous one instead of being refused as older.
           BRIDGE_VERSION_CODE: ${{ github.run_number }}
-        run: gradle assembleRelease --no-daemon --console=plain
+        run: ./gradlew assembleRelease --no-daemon --console=plain
 
       - name: inspect
         run: |

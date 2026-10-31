@@ -16,11 +16,23 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        // A keystore in the repo, on purpose. A GitHub runner generates a fresh debug key every
+        // run, so `adb install -r` between two builds of this same project is refused — which is
+        // exactly the trap this tool fell into first. The password is public and the key is not a
+        // trust anchor: it only has to be the same key every time.
+        create("sideload") {
+            storeFile = file("sideload.jks")
+            storePassword = "sideload"
+            keyAlias = "sideload"
+            keyPassword = "sideload"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Debug key: the APK is for a phone you control, sideloaded over adb.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("sideload")
         }
     }
 

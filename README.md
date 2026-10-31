@@ -26,14 +26,24 @@ attempt to forge one. A service, enabled once by the person holding the phone, i
 ## Build
 
 CI builds it (`.github/workflows/build-apk.yml`): unit tests, then `assembleRelease`, APK on the
-run page. Locally, with a JDK 17 and an Android SDK:
+run page.
+
+## Before you push
 
 ```bash
-gradle test            # the rules, the JSON shape, the protocol, the socket — all on the JVM
-gradle assembleRelease # app/build/outputs/apk/release/app-release.apk
+tooling/check.sh --device
 ```
 
-The APK is debug-signed so it can be sideloaded; it is not for a store.
+`check.sh` runs the JVM tests and builds the release APK. `--device` then installs it on the
+connected phone, switches the service on and proves a read comes back — that part catches what a
+JVM test cannot, and two of the four defects this tool shipped were exactly that: a `Service`
+touching its `Context` before `attachBaseContext`, and a port another app already owned.
+
+Both scripts find a JDK 17 and an Android SDK themselves; `JAVA_HOME` / `ANDROID_HOME` override.
+
+The APK is signed with `app/sideload.jks`, which is in the repo on purpose: the key only has to be
+the same one every time, so builds install over each other. It is not a trust anchor — a store
+would reject it, and that is fine.
 
 ## Install
 
