@@ -170,8 +170,10 @@ class BridgeService : AccessibilityService() {
         if (token == null || token.length < 8) return "ERR token must be at least 8 characters"
         val port = intent.getIntExtra("port", PORT)
         val bound = bridge?.start(token, port).orEmpty()
+        // Say exactly what took, not what was asked for: a busy address silently downgrades to ::1
+        // and a client on 127.0.0.1 would then be talking to whoever else holds the port.
         if (bound.isEmpty()) return "ERR nothing bound on port $port (127.0.0.1, ::1)"
-        return "listening on 127.0.0.1:${bound.first()} (and ::1), closes itself after 10 idle minutes"
+        return "listening on ${bound.joinToString(", ")}, closes itself after 10 idle minutes"
     }
 
     /** Where a broadcast dump goes: the app's own files plus the external dir adb shell can read. */
@@ -216,8 +218,12 @@ class BridgeService : AccessibilityService() {
         /** The dsh-Go .a11y fork's action, still answered so existing clients keep working. */
         const val LEGACY_ACTION = "io.github.ccch1mneyyy.dsh_app.A11Y_PROBE"
 
-        /** Where the socket listens, for `adb forward tcp:PORT tcp:PORT`. */
-        const val PORT = 47913
+        /**
+         * Where the socket listens, for `adb forward tcp:PORT tcp:PORT`. Not 47913: the DSH app on
+         * the test phone holds that on 127.0.0.1 itself, and a port someone else owns means the
+         * client talks to them and gets nothing back.
+         */
+        const val PORT = 47113
 
         private const val REUSE_MS = 2_000L
         private const val READ_TIMEOUT_MS = 20_000L

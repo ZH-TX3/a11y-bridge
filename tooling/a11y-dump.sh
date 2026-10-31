@@ -28,7 +28,7 @@ pkg=${A11Y_PKG:-io.github.zh_tx3.a11ybridge}
 action=io.github.zh_tx3.a11ybridge.PROBE
 name=tree
 budget=400
-port=${A11Y_PORT:-47913}
+port=${A11Y_PORT:-47113}
 tag=$RANDOM
 out=''
 serial=()
@@ -102,15 +102,20 @@ send() {
   esac
 }
 
-# Why a read failed: which of the three links is missing (forward, service, listener).
+# Why a read failed: which link is missing — and who else is on the port, because an address someone
+# else owns silently sends the client to their listener, which answers nothing.
 diagnose() {
+  local hex
+  hex=$(printf '%04X' "$port")
   echo "a11y-dump: no answer on 127.0.0.1:$port" >&2
   echo "--- adb forward ---" >&2
   adbx forward --list >&2
+  echo "--- listening on $port (uid, state 0A = LISTEN) ---" >&2
+  adbx shell "cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | grep -i '$hex'" 2>/dev/null | head -4 >&2
   echo "--- enabled accessibility services ---" >&2
   adbx shell settings get secure enabled_accessibility_services >&2
   echo "--- probe log (last 10) ---" >&2
-  adbx logcat -d -s DshA11yProbe DshA11y 2>/dev/null | tail -10 >&2
+  adbx logcat -d -s A11yBridge DshA11yProbe DshA11y 2>/dev/null | tail -10 >&2
   exit 1
 }
 

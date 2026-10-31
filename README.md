@@ -51,9 +51,9 @@ The service is the only component that matters. Everything below is `adb shell`.
 ./tooling/a11y-dump.sh --socket
 
 # Same thing by hand (the token comes from a DUMP-protected broadcast):
-adb forward tcp:47913 tcp:47913
+adb forward tcp:47113 tcp:47113
 adb shell am broadcast -a io.github.zh_tx3.a11ybridge.PROBE --es cmd listen --es token mytoken1234
-printf 'mytoken1234 dump 400 - 1\n' | nc 127.0.0.1 47913
+printf 'mytoken1234 dump 400 - 1\n' | nc 127.0.0.1 47113
 
 # Fallback: nothing to set up, ~0.4 s.
 ./tooling/a11y-dump.sh
@@ -66,7 +66,7 @@ printf 'mytoken1234 dump 400 - 1\n' | nc 127.0.0.1 47913
 
 ## The two transports
 
-**Socket** — `ServerSocket` on `127.0.0.1` *and* `::1`, port 47913, one line per request, one
+**Socket** — `ServerSocket` on `127.0.0.1` *and* `::1`, port 47113, one line per request, one
 framed reply per line:
 
 ```

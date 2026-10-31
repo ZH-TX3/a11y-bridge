@@ -34,19 +34,24 @@ internal class Bridge(
     private var servers: List<ServerSocket> = emptyList()
     private var watchdog: Thread? = null
 
-    /** Returns the ports actually bound, one per address that took. Port 0 picks an ephemeral one. */
-    fun start(token: String, port: Int): List<Int> {
+    /** One address that took the bind. */
+    class Bound(val host: String, val port: Int) {
+        override fun toString() = "$host:$port"
+    }
+
+    /** What actually bound, one per address that took. Port 0 picks an ephemeral one. */
+    fun start(token: String, port: Int): List<Bound> {
         stop()
         this.token = token
         val opened = ArrayList<ServerSocket>(2)
-        val ports = ArrayList<Int>(2)
+        val bound = ArrayList<Bound>(2)
         for (host in LOOPBACKS) {
             try {
                 val socket = ServerSocket()
                 socket.reuseAddress = true
                 socket.bind(InetSocketAddress(InetAddress.getByName(host), port))
                 opened += socket
-                ports += socket.localPort
+                bound += Bound(host, socket.localPort)
             } catch (e: Throwable) {
                 log("bind $host:$port failed: ${e.javaClass.simpleName}")
             }
@@ -60,7 +65,7 @@ internal class Bridge(
             }
         }
         startWatchdog()
-        return ports
+        return bound
     }
 
     fun stop() {

@@ -66,7 +66,7 @@ class BridgeTest {
     @Test
     fun aHandlerFailureIsReportedInTheFrameNotByDropping() {
         val bridge = Bridge({ throw IllegalStateException("boom") })
-        val port = bridge.start(token, 0).first()
+        val port = bridge.start(token, 0).first().port
         try {
             assertEquals("ERR IllegalStateException: boom", request(port, "$token dump"))
         } finally {
@@ -77,7 +77,7 @@ class BridgeTest {
     @Test
     fun stopReleasesThePort() {
         val bridge = Bridge({ "pong".toByteArray() })
-        val port = bridge.start(token, 0).first()
+        val port = bridge.start(token, 0).first().port
         assertEquals("pong", request(port, "$token ping"))
         bridge.stop()
         assertNull(request(port, "$token ping"))
@@ -86,7 +86,7 @@ class BridgeTest {
     @Test
     fun anIdleListenerClosesItself() {
         val bridge = Bridge({ "pong".toByteArray() }, idleCloseMs = 300, idleCheckMs = 50)
-        val port = bridge.start(token, 0).first()
+        val port = bridge.start(token, 0).first().port
         assertEquals("pong", request(port, "$token ping"))
 
         // Silence, then one look: polling with requests would itself keep the listener alive.
@@ -97,7 +97,7 @@ class BridgeTest {
     @Test
     fun aListenerThatIsUsedStaysOpen() {
         val bridge = Bridge({ "pong".toByteArray() }, idleCloseMs = 400, idleCheckMs = 50)
-        val port = bridge.start(token, 0).first()
+        val port = bridge.start(token, 0).first().port
         try {
             // Well past the idle window in total, but never idle for it.
             repeat(8) {
@@ -125,10 +125,10 @@ class BridgeTest {
             seen += req
             "pong-${counter++}".toByteArray()
         })
-        val ports = bridge.start(token, 0)
-        assertTrue("nothing bound", ports.isNotEmpty())
+        val bound = bridge.start(token, 0)
+        assertTrue("nothing bound", bound.isNotEmpty())
         try {
-            block(ports.first(), seen)
+            block(bound.first().port, seen)
         } finally {
             bridge.stop()
         }
