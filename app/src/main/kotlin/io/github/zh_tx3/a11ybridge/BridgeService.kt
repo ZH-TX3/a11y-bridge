@@ -26,7 +26,11 @@ import java.util.concurrent.TimeUnit
  */
 class BridgeService : AccessibilityService() {
     private val executor = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "a11y-bridge") }
-    private val dir = File(filesDir, "a11y-bridge")
+    /**
+     * lazy, not a plain initializer: a Service's field initializers run before attachBaseContext,
+     * so `filesDir` there is a NullPointerException on a real device (not in a JVM test).
+     */
+    private val dir: File by lazy { File(filesDir, "a11y-bridge").apply { mkdirs() } }
     private var bridge: Bridge? = null
     private var receiver: BroadcastReceiver? = null
 
@@ -38,7 +42,6 @@ class BridgeService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        dir.mkdirs()
         bridge = Bridge({ request ->
             // Captures are serialized: a socket client and a broadcast never read at once.
             executor.submit(Callable { handle(request) }).get(READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
